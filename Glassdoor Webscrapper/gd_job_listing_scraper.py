@@ -1,15 +1,4 @@
-"""
-Glassdoor Web Scraping Script for Job Listings
-
-This script uses Selenium to scrape job listings from Glassdoor based on a given job title.
-It extracts relevant job details, including job title, location, salary estimate, employer name,
-job description, rating, and company information. The extracted data is then saved to a CSV file.
-
-Author: Kareem Tarek
-Date: Sat Aug 19 15:01:36 2023
-"""
-
-from selenium.common.exceptions import NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException, WebDriverException
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -86,8 +75,6 @@ def extract_job_details(listing, driver):
     except NoSuchElementException:
          job_description = "N/A"
          
-         
-     
     # Extract rating
     try:
          rating = driver.find_element(By.CSS_SELECTOR, '[data-test="detailRating"]').text
@@ -105,7 +92,7 @@ def extract_job_details(listing, driver):
     # Extract company info  
     try:
         company_container = driver.find_element(By.ID, "CompanyContainer")
-    
+        
         # Extract company size
         try:
             size_element = company_container.find_element(By.XPATH, './/span[text()="Size"]/following-sibling::span')
@@ -158,17 +145,36 @@ def extract_job_details(listing, driver):
     
     except NoSuchElementException:
         print("Company info not found.")
-         
+    
     return job_details
+
+
+# Function to initiate the WebDriver with retries
+def initiate_webdriver():
+    max_attempts = 5  # Maximum number of attempts to establish WebDriver
+    
+    for attempt in range(1, max_attempts + 1):
+        try:
+            options = webdriver.EdgeOptions()
+            driver = webdriver.Edge(options=options)
+            driver.set_window_size(1120, 1000)
+            return driver
+        except WebDriverException:
+            print(f"Attempt {attempt}/{max_attempts}: WebDriver initiation failed. Retrying...")
+            time.sleep(5)  # Wait before retrying
+    
+    print(f"Failed to initiate WebDriver after {max_attempts} attempts.")
+    return None
 
 # Main function to initiate scraping
 def main(job_title):
     print("="*50)
     print("Fetching for: ", job_title)
-    # Set up WebDriver
-    options = webdriver.EdgeOptions()
-    driver = webdriver.Edge(options=options)
-    driver.set_window_size(1120, 1000)
+    
+    driver = initiate_webdriver()
+    if driver is None:
+        print("Exiting due to WebDriver initiation failure.")
+        return []
 
     # Construct the URL for the Glassdoor job search
     url = f"https://www.glassdoor.com/Job/jobs.htm?suggestCount=0&suggestChosen=false&clickSource=searchBtn&typedKeyword={job_title}&sc.keyword={job_title}&locT=&locId=&jobType="
@@ -180,47 +186,32 @@ def main(job_title):
 
     jobs = []
 
-    # Iterate over page_numbers or reach maximum number of jobs
     for _ in range(int(2)):
-        #if len(jobs) >= number_of_jobs:bvbvbvbbbvb
-           #break  # Stop if the desired number of jobs is reached
-        
-        # Find job listings on the current page
         job_listings = driver.find_elements(By.CLASS_NAME, "react-job-listing")
         
         # Iterate over job listings
-        for listing in job_listings:  # Process only the first 3 job in each page 
-            # Click on the job listing
+        for listing in job_listings:
             driver.execute_script("arguments[0].click();", listing)
-    
-            # Sleep until page loads
             time.sleep(3)
-    
-            # Click "Show More" to expand job details
             click_show_more(driver)
-    
-            # Sleep until page loads
             time.sleep(2)
-    
-            # Extract job details using the function
             job_details = extract_job_details(listing, driver)
-            # Check for duplicates before appending
             if job_details not in jobs:
                 print(job_details)
                 print("*"*50)
                 jobs.append(job_details)
     
-        # Click the "Next" button and check if there are more pages
         if not click_next_button(driver):
             break
     
+    driver.quit()  # Close the WebDriver
+
     return jobs
 
 ## Main function call
+# job_titles = ['data_scientist', 'data analyst', 'machine learning', 'data engineer', 'business intelligence analyst', 'business intelligence developer']
 
-# Existing job listings for 'data scientist'
-# Iterate through different job titles
-job_titles = ['data_scientist', 'data analyst', 'machine learning', 'data engineer', 'business intelligence analyst', 'business intelligence developer']
+job_titles = ['data_scientist', 'data analyst']
 
 jobs = []
 
@@ -240,4 +231,4 @@ jobs_df = pd.DataFrame(jobs)
 # Save the combined DataFrame to a CSV file
 jobs_df.to_csv('combined_data_jobs.csv', index=False, encoding='utf-8-sig')
 
-print("Jobs data saved to 'combined_jobs.csv'")
+print("Jobs data saved to 'combined_data_jobs.csv'")
