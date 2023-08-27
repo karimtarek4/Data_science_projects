@@ -185,8 +185,8 @@ def main(job_title):
     page_numbers = pagination_footer.split()[-1]
 
     jobs = []
-
-    for _ in range(int(2)):
+    
+    for _ in range(int(page_numbers)):
         job_listings = driver.find_elements(By.CLASS_NAME, "react-job-listing")
         
         # Iterate over job listings
