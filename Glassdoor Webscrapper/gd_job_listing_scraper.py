@@ -162,7 +162,7 @@ def extract_job_details(listing, driver):
     return job_details
 
 # Main function to initiate scraping
-def main(job_title, number_of_jobs):
+def main(job_title):
     print("="*50)
     print("Fetching for: ", job_title)
     # Set up WebDriver
@@ -181,7 +181,7 @@ def main(job_title, number_of_jobs):
     jobs = []
 
     # Iterate over page_numbers or reach maximum number of jobs
-    for _ in range(int(5)):
+    for _ in range(int(2)):
         #if len(jobs) >= number_of_jobs:bvbvbvbbbvb
            #break  # Stop if the desired number of jobs is reached
         
@@ -216,66 +216,28 @@ def main(job_title, number_of_jobs):
     
     return jobs
 
-# Existing job listings for 'data scientist'
-# jobs = main('data scientist', 0)
-# data_scientist_df = pd.DataFrame(jobs)
-# print("="*20, "date scientist complete", "="*20)
+## Main function call
 
 # Existing job listings for 'data scientist'
-jobs = main('data_scientist', 0)
-data_scientist_df = pd.DataFrame(jobs)
-print("="*20, "scientist complete", "="*20)
+# Iterate through different job titles
+job_titles = ['data_scientist', 'data analyst', 'machine learning', 'data engineer', 'business intelligence analyst', 'business intelligence developer']
 
+jobs = []
 
+# Scraping job listings and creating DataFrames
+for title in job_titles:
+    job_listings = main(title)
+    job_df = pd.DataFrame(job_listings)
+    
+    # Check for duplicate job listings before appending
+    for _, row in job_df.iterrows():
+        if row.to_dict() not in jobs:
+            jobs.append(row.to_dict())
 
-
-#  Additional job listings for 'data analyst', 'machine learning', and 'data engineer'
-data_analyst_jobs = main('data analyst', 500)
-data_analyst_jobs_df = pd.DataFrame(data_analyst_jobs)
-print("="*20, "date analyst complete", "="*20)
-
-
-machine_learning_jobs = main('machine learning', 500)
-machine_learning_jobs_df = pd.DataFrame(machine_learning_jobs)
-print("="*20, "achine learning", "="*20)
-
-
-data_engineer_jobs = main('data engineer', 500)
-data_engineer_jobs_df = pd.DataFrame(data_engineer_jobs)
-print("="*20, "data engineer complete", "="*20)
-
-
-
-business_intelligence_analyst = main('business intelligence analyst', 500)
-business_intelligence_analyst_df = pd.DataFrame(business_intelligence_analyst)
-print("="*20, "business intelligence analyst complete", "="*20)
-
-
-
-business_intelligence_developer = main('business intelligence developer', 500)
-business_intelligence_developer_df = pd.DataFrame(business_intelligence_developer)
-print("="*20, "business intelligence developer complete", "="*20)
-
-
-
-# Append the additional job listings to the 'jobs' list
-jobs.extend(data_analyst_jobs)
-jobs.extend(machine_learning_jobs)
-jobs.extend(data_engineer_jobs)
-jobs.extend(business_intelligence_analyst)
-jobs.extend(business_intelligence_developer)
-
-
-# Convert the jobs list to a DataFrame
+# Create a DataFrame from the combined job listings
 jobs_df = pd.DataFrame(jobs)
-print("="*20, "Data Frame Ready", "="*20)
 
+# Save the combined DataFrame to a CSV file
+jobs_df.to_csv('combined_data_jobs.csv', index=False, encoding='utf-8-sig')
 
-# Display the DataFrame
-print(jobs_df)
-
-# Save the DataFrame to a CSV file
-jobs_df.to_csv('machine_learning.csv', index=False, encoding='utf-8-sig')
-
-
-print("Jobs data saved to 'jobs.csv'")
+print("Jobs data saved to 'combined_jobs.csv'")
