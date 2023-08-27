@@ -1,0 +1,240 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<title></title>
+</head>
+<body>
+from selenium.common.exceptions import NoSuchElementException, WebDriverException<br/>
+from selenium import webdriver<br/>
+from selenium.webdriver.common.by import By<br/>
+from selenium.webdriver.support.ui import WebDriverWait<br/>
+from selenium.webdriver.support import expected_conditions as EC<br/>
+<br/>
+import time<br/>
+import pandas as pd<br/>
+<br/>
+# Function to click the &ldquo;Show More&ldquo; button to expand job details<br/>
+def click_show_more(driver):<br/>
+    try:<br/>
+        show_more_less = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, &ldquo;.css&ndash;t3xrds.e856ufb4&ldquo;)))<br/>
+    except:<br/>
+        show_more_less = None<br/>
+    <br/>
+    if show_more_less:<br/>
+        # Scroll the element into view<br/>
+        driver.execute_script(&ldquo;arguments[0].scrollIntoView();&ldquo;, show_more_less)<br/>
+        driver.execute_script(&ldquo;arguments[0].click();&ldquo;, show_more_less)<br/>
+        return True<br/>
+    else:<br/>
+        return False<br/>
+<br/>
+# Function to click the &ldquo;Next&ldquo; button for pagination<br/>
+def click_next_button(driver):<br/>
+    try:<br/>
+        time.sleep(2)<br/>
+        next_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, &lsquo;//button[@data&ndash;test=&ldquo;pagination&ndash;next&ldquo;]&lsquo;)))<br/>
+        driver.execute_script(&ldquo;arguments[0].scrollIntoView();&ldquo;, next_button)<br/>
+        driver.execute_script(&ldquo;arguments[0].click();&ldquo;, next_button)<br/>
+        time.sleep(3)<br/>
+    except NoSuchElementException:<br/>
+        print(&ldquo;Reached the last page or unable to find the &lsquo;Next&lsquo; button&ldquo;)<br/>
+        return False<br/>
+    return True<br/>
+<br/>
+# Function to extract job details from a listing<br/>
+def extract_job_details(listing, driver):<br/>
+    job_details = {}<br/>
+    <br/>
+    # Extract job title<br/>
+    try:         <br/>
+         job_title = listing.find_element(By.CLASS_NAME, &ldquo;job&ndash;title&ldquo;).text<br/>
+    except NoSuchElementException:<br/>
+         job_title = &ldquo;N/A&ldquo;<br/>
+    <br/>
+    # Extract location<br/>
+    try:         <br/>
+          location = listing.find_element(By.CLASS_NAME, &ldquo;location&ldquo;).text<br/>
+    except NoSuchElementException:<br/>
+          location = &ldquo;N/A&ldquo;<br/>
+<br/>
+    # Extract salary estimate<br/>
+    try:<br/>
+         salary_estimate_element = listing.find_element(By.CSS_SELECTOR, &lsquo;div.salary&ndash;estimate[data&ndash;test=&ldquo;detailSalary&ldquo;]&lsquo;)<br/>
+         salary_estimate = salary_estimate_element.text<br/>
+    except NoSuchElementException:<br/>
+         salary_estimate = &ldquo;N/A&ldquo;<br/>
+         <br/>
+    # Extract employer name<br/>
+    try:<br/>
+         employer_name_element = driver.find_element(By.XPATH, &lsquo;.//div[@data&ndash;test=&ldquo;employerName&ldquo;]&lsquo;)<br/>
+         employer_name = employer_name_element.text.strip().split(&lsquo;\n&lsquo;)[0]<br/>
+    except NoSuchElementException:        <br/>
+        employer_name = &ldquo;N/A&ldquo;<br/>
+    <br/>
+    # Extract job description<br/>
+    job_description = &ldquo;&ldquo;<br/>
+    try:<br/>
+         job_description_element = driver.find_element(By.CLASS_NAME, &ldquo;jobDescriptionContent&ldquo;)<br/>
+         elements = job_description_element.find_elements(By.XPATH, &ldquo;.//*&ldquo;)<br/>
+         job_description = &ldquo;\n&ldquo;.join([element.text for element in elements if element.text])<br/>
+         job_description = job_description.replace(&lsquo;\n&lsquo;, &lsquo; &lsquo;)  # Remove newlines within job description<br/>
+    except NoSuchElementException:<br/>
+         job_description = &ldquo;N/A&ldquo;<br/>
+         <br/>
+    # Extract rating<br/>
+    try:<br/>
+         rating = driver.find_element(By.CSS_SELECTOR, &lsquo;[data&ndash;test=&ldquo;detailRating&ldquo;]&lsquo;).text<br/>
+    except NoSuchElementException:<br/>
+         rating = &ldquo;N/A&ldquo;<br/>
+    <br/>
+    # Create the job details dictionary<br/>
+    job_details[&ldquo;Location&ldquo;] = location<br/>
+    job_details[&ldquo;Job Title&ldquo;] = job_title<br/>
+    job_details[&ldquo;Salary Estimate&ldquo;] = salary_estimate<br/>
+    job_details[&ldquo;Employer Name&ldquo;] =  employer_name    <br/>
+    job_details[&ldquo;Job Description&ldquo;] = job_description.replace(&lsquo;\n&lsquo;, &lsquo; &lsquo;)<br/>
+    job_details[&ldquo;Rating&ldquo;] = rating<br/>
+    <br/>
+    # Extract company info  <br/>
+    try:<br/>
+        company_container = driver.find_element(By.ID, &ldquo;CompanyContainer&ldquo;)<br/>
+        <br/>
+        # Extract company size<br/>
+        try:<br/>
+            size_element = company_container.find_element(By.XPATH, &lsquo;.//span[text()=&ldquo;Size&ldquo;]/following&ndash;sibling::span&lsquo;)<br/>
+            size = size_element.text<br/>
+        except NoSuchElementException:<br/>
+            size = &ldquo;N/A&ldquo;<br/>
+    <br/>
+        # Extract founded year<br/>
+        try:<br/>
+            founded_element = company_container.find_element(By.XPATH, &lsquo;.//span[text()=&ldquo;Founded&ldquo;]/following&ndash;sibling::span&lsquo;)<br/>
+            founded = founded_element.text<br/>
+        except NoSuchElementException:<br/>
+            founded = &ldquo;N/A&ldquo;<br/>
+    <br/>
+        # Extract company type<br/>
+        try:<br/>
+            company_type_element = company_container.find_element(By.XPATH, &lsquo;.//span[text()=&ldquo;Type&ldquo;]/following&ndash;sibling::span&lsquo;)<br/>
+            company_type = company_type_element.text<br/>
+        except NoSuchElementException:<br/>
+            company_type = &ldquo;N/A&ldquo;<br/>
+    <br/>
+        # Extract industry<br/>
+        try:<br/>
+            industry_element = company_container.find_element(By.XPATH, &lsquo;.//span[text()=&ldquo;Industry&ldquo;]/following&ndash;sibling::span&lsquo;)<br/>
+            industry = industry_element.text<br/>
+        except NoSuchElementException:<br/>
+            industry = &ldquo;N/A&ldquo;<br/>
+    <br/>
+        # Extract sector<br/>
+        try:<br/>
+            sector_element = company_container.find_element(By.XPATH, &lsquo;.//span[text()=&ldquo;Sector&ldquo;]/following&ndash;sibling::span&lsquo;)<br/>
+            sector = sector_element.text<br/>
+        except NoSuchElementException:<br/>
+            sector = &ldquo;N/A&ldquo;<br/>
+    <br/>
+        # Extract revenue<br/>
+        try:<br/>
+            revenue_element = company_container.find_element(By.XPATH, &lsquo;.//span[text()=&ldquo;Revenue&ldquo;]/following&ndash;sibling::span&lsquo;)<br/>
+            revenue = revenue_element.text<br/>
+        except NoSuchElementException:<br/>
+            revenue = &ldquo;N/A&ldquo;<br/>
+        <br/>
+        # Add company info to job details dictionary<br/>
+        job_details[&ldquo;Company Size&ldquo;] = size<br/>
+        job_details[&ldquo;Founded&ldquo;] = founded<br/>
+        job_details[&ldquo;Type&ldquo;] = company_type<br/>
+        job_details[&ldquo;Industry&ldquo;] = industry<br/>
+        job_details[&ldquo;Sector&ldquo;] = sector<br/>
+        job_details[&ldquo;Revenue&ldquo;] = revenue<br/>
+    <br/>
+    except NoSuchElementException:<br/>
+        print(&ldquo;Company info not found.&ldquo;)<br/>
+    <br/>
+    return job_details<br/>
+<br/>
+<br/>
+# Function to initiate the WebDriver with retries<br/>
+def initiate_webdriver():<br/>
+    max_attempts = 5  # Maximum number of attempts to establish WebDriver<br/>
+    <br/>
+    for attempt in range(1, max_attempts + 1):<br/>
+        try:<br/>
+            options = webdriver.EdgeOptions()<br/>
+            driver = webdriver.Edge(options=options)<br/>
+            driver.set_window_size(1120, 1000)<br/>
+            return driver<br/>
+        except WebDriverException:<br/>
+            print(f&ldquo;Attempt {attempt}/{max_attempts}: WebDriver initiation failed. Retrying...&ldquo;)<br/>
+            time.sleep(5)  # Wait before retrying<br/>
+    <br/>
+    print(f&ldquo;Failed to initiate WebDriver after {max_attempts} attempts.&ldquo;)<br/>
+    return None<br/>
+<br/>
+# Main function to initiate scraping<br/>
+def main(job_title):<br/>
+    print(&ldquo;=&ldquo;*50)<br/>
+    print(&ldquo;Fetching for: &ldquo;, job_title)<br/>
+    <br/>
+    driver = initiate_webdriver()<br/>
+    if driver is None:<br/>
+        print(&ldquo;Exiting due to WebDriver initiation failure.&ldquo;)<br/>
+        return []<br/>
+<br/>
+    # Construct the URL for the Glassdoor job search<br/>
+    url = f&ldquo;https://www.glassdoor.com/Job/jobs.htm?suggestCount=0&amp;suggestChosen=false&amp;clickSource=searchBtn&amp;typedKeyword={job_title}&amp;sc.keyword={job_title}&amp;locT=&amp;locId=&amp;jobType=&ldquo;<br/>
+    driver.get(url)<br/>
+<br/>
+    # Extract total number of pages for pagination<br/>
+    pagination_footer = driver.find_element(By.CLASS_NAME, &ldquo;paginationFooter&ldquo;).text<br/>
+    page_numbers = pagination_footer.split()[&ndash;1]<br/>
+<br/>
+    jobs = []<br/>
+<br/>
+    for _ in range(int(2)):<br/>
+        job_listings = driver.find_elements(By.CLASS_NAME, &ldquo;react&ndash;job&ndash;listing&ldquo;)<br/>
+        <br/>
+        # Iterate over job listings<br/>
+        for listing in job_listings:<br/>
+            driver.execute_script(&ldquo;arguments[0].click();&ldquo;, listing)<br/>
+            time.sleep(3)<br/>
+            click_show_more(driver)<br/>
+            time.sleep(2)<br/>
+            job_details = extract_job_details(listing, driver)<br/>
+            if job_details not in jobs:<br/>
+                print(job_details)<br/>
+                print(&ldquo;*&ldquo;*50)<br/>
+                jobs.append(job_details)<br/>
+    <br/>
+        if not click_next_button(driver):<br/>
+            break<br/>
+    <br/>
+    driver.quit()  # Close the WebDriver<br/>
+<br/>
+    return jobs<br/>
+<br/>
+## Main function call<br/>
+# job_titles = [&lsquo;data_scientist&lsquo;, &lsquo;data analyst&lsquo;, &lsquo;machine learning&lsquo;, &lsquo;data engineer&lsquo;, &lsquo;business intelligence analyst&lsquo;, &lsquo;business intelligence developer&lsquo;]<br/>
+<br/>
+job_titles = [&lsquo;data_scientist&lsquo;, &lsquo;data analyst&lsquo;]<br/>
+<br/>
+jobs = []<br/>
+<br/>
+# Scraping job listings and creating DataFrames<br/>
+for title in job_titles:<br/>
+    job_listings = main(title)<br/>
+    job_df = pd.DataFrame(job_listings)<br/>
+    <br/>
+    # Check for duplicate job listings before appending<br/>
+    for _, row in job_df.iterrows():<br/>
+        if row.to_dict() not in jobs:<br/>
+            jobs.append(row.to_dict())<br/>
+<br/>
+# Create a DataFrame from the combined job listings<br/>
+jobs_df = pd.DataFrame(jobs)<br/>
+<br/>
+# Save the combined DataFrame to a CSV file<br/>
+jobs_df.to_csv(&lsquo;combined_data_jobs.csv&lsquo;, index=False, encoding=&lsquo;utf&ndash;8&ndash;sig&lsquo;)<br/>
+<br/>
+print(&ldquo;Jobs data saved to &lsquo;combined_data_jobs.csv&lsquo;&ldquo;)</body></html>
