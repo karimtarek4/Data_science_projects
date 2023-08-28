@@ -7,6 +7,7 @@ from selenium.webdriver.support import expected_conditions as EC
 import time
 import pandas as pd
 
+
 # Function to click the "Show More" button to expand job details
 def click_show_more(driver):
     try:
@@ -166,8 +167,15 @@ def initiate_webdriver():
     print(f"Failed to initiate WebDriver after {max_attempts} attempts.")
     return None
 
+# Function to export job listings to CSV
+def export_csv(jobs, page_num, job_title):
+    job_df = pd.DataFrame(jobs)
+    csv_filename = f'{job_title}_page_{page_num}.csv'
+    job_df.to_csv(csv_filename, index=False, encoding='utf-8-sig')
+    print(f"Exported job listings to '{csv_filename}'")
+
 # Main function to initiate scraping
-def main(job_title):
+def main(job_title, export_interval=2):
     print("="*50)
     print("Fetching for: ", job_title)
     
@@ -185,6 +193,14 @@ def main(job_title):
     page_numbers = pagination_footer.split()[-1]
 
     jobs = []
+    
+    for page_num in range(1, int(page_numbers) + 1):
+       if page_num > 1 and page_num % export_interval == 1:
+           export_csv(jobs, page_num, job_title)  # Export CSV every 2 pages starting from page 1
+           
+       print("="*50)    
+       print(f"Accessing page {page_num}")
+       
     
     for _ in range(int(page_numbers)):
         job_listings = driver.find_elements(By.CLASS_NAME, "react-job-listing")
@@ -211,7 +227,7 @@ def main(job_title):
 ## Main function call
 # job_titles = ['data_scientist', 'data analyst', 'machine learning', 'data engineer', 'business intelligence analyst', 'business intelligence developer']
 
-job_titles = ['data_scientist', 'data analyst']
+job_titles = ['data_scientist']
 
 jobs = []
 
@@ -224,11 +240,13 @@ for title in job_titles:
     for _, row in job_df.iterrows():
         if row.to_dict() not in jobs:
             jobs.append(row.to_dict())
+    export_csv(jobs, title, 'all') 
+    
 
 # Create a DataFrame from the combined job listings
 jobs_df = pd.DataFrame(jobs)
 
-# Save the combined DataFrame to a CSV file
+# Save all job title in one csv
 jobs_df.to_csv('combined_data_jobs.csv', index=False, encoding='utf-8-sig')
 
 print("Jobs data saved to 'combined_data_jobs.csv'")
