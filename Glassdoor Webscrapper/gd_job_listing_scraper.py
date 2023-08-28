@@ -175,8 +175,8 @@ def export_csv(jobs, page_num, job_title):
     print(f"Exported job listings to '{csv_filename}'")
 
 # Main function to initiate scraping
-def main(job_title, export_interval=2):
-    print("="*50)
+def main(job_title, export_interval=1):
+    print("-"*30)
     print("Fetching for: ", job_title)
     
     driver = initiate_webdriver()
@@ -191,20 +191,20 @@ def main(job_title, export_interval=2):
     # Extract total number of pages for pagination
     pagination_footer = driver.find_element(By.CLASS_NAME, "paginationFooter").text
     page_numbers = pagination_footer.split()[-1]
+    page_start = 1 # Start page (mark checkpoint if the algorithm haulted for connection reason)
+    jobs_per_page = 10  # Number of jobs to fetch per page
+
 
     jobs = []
     
-    for page_num in range(1, int(page_numbers) + 1):
-       if page_num > 1 and page_num % export_interval == 1:
-           export_csv(jobs, page_num, job_title)  # Export CSV every 2 pages starting from page 1
-           
-       print("="*50)    
-       print(f"Accessing page {page_num}")
-       
     
-    for _ in range(int(page_numbers)):
-        job_listings = driver.find_elements(By.CLASS_NAME, "react-job-listing")
+    for page_num in range(page_start, int(page_numbers) + 1):
         
+        print("="*50)    
+        print(f"Accessing page {page_num}")
+        
+        job_listings = driver.find_elements(By.CLASS_NAME, "react-job-listing")
+            
         # Iterate over job listings
         for listing in job_listings:
             driver.execute_script("arguments[0].click();", listing)
@@ -214,12 +214,15 @@ def main(job_title, export_interval=2):
             job_details = extract_job_details(listing, driver)
             if job_details not in jobs:
                 print(job_details)
-                print("*"*50)
+                print("/"*10)
                 jobs.append(job_details)
-    
+        
         if not click_next_button(driver):
             break
-    
+            
+        if page_num % export_interval == 0:
+            export_csv(jobs, page_num, job_title)  # Export every n pages 
+        
     driver.quit()  # Close the WebDriver
 
     return jobs
