@@ -175,7 +175,8 @@ def export_csv(jobs, page_num, job_title):
     print(f"Exported job listings to '{csv_filename}'")
 
 # Main function to initiate scraping
-def main(job_title, export_interval=1):
+# Export_interval= export every 3 pages
+def main(job_title, export_interval=3):
     print("-"*30)
     print("Fetching for: ", job_title)
     
@@ -196,6 +197,13 @@ def main(job_title, export_interval=1):
 
 
     jobs = []
+    
+    # Click next until reaching start page
+    for _ in range(page_start - 1):
+        print("Next page:")
+        if not click_next_button(driver):
+            print("Reached the desired starting page.")
+            break
     
     
     for page_num in range(page_start, int(page_numbers) + 1):
