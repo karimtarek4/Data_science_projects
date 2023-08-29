@@ -26,11 +26,11 @@ def click_show_more(driver):
 # Function to click the "Next" button for pagination
 def click_next_button(driver):
     try:
-        time.sleep(2)
+        time.sleep(10)
         next_button = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.XPATH, '//button[@data-test="pagination-next"]')))
         driver.execute_script("arguments[0].scrollIntoView();", next_button)
         driver.execute_script("arguments[0].click();", next_button)
-        time.sleep(3)
+        time.sleep(15)
     except NoSuchElementException:
         print("Reached the last page or unable to find the 'Next' button")
         return False
@@ -67,14 +67,19 @@ def extract_job_details(listing, driver):
         employer_name = "N/A"
     
     # Extract job description
+    # Extract job description
     job_description = ""
     try:
-         job_description_element = driver.find_element(By.CLASS_NAME, "jobDescriptionContent")
-         elements = job_description_element.find_elements(By.XPATH, ".//*")
-         job_description = "\n".join([element.text for element in elements if element.text])
-         job_description = job_description.replace('\n', ' ')  # Remove newlines within job description
+        job_description_element = driver.find_element(By.CLASS_NAME, "jobDescriptionContent")
+        elements = job_description_element.find_elements(By.XPATH, ".//*")
+        job_description = " ".join([element.text for element in elements if element.text])
+        job_description = job_description.replace('\n', ' ')  # Remove newlines within job description
     except NoSuchElementException:
-         job_description = "N/A"
+        job_description = "N/A"
+    
+    # Clean and limit job description to a certain length
+    max_job_description_length = 32767  # Set a maximum character limit to display well in excel
+    job_description = job_description[:max_job_description_length]
          
     # Extract rating
     try:
@@ -175,8 +180,8 @@ def export_csv(jobs, page_num, job_title):
     print(f"Exported job listings to '{csv_filename}'")
 
 # Main function to initiate scraping
-# Export_interval= export every 3 pages
-def main(job_title, export_interval=3):
+# Export_interval= export every 2 pages
+def main(job_title, export_interval=1):
     print("-"*30)
     print("Fetching for: ", job_title)
     
@@ -191,22 +196,23 @@ def main(job_title, export_interval=3):
 
     # Extract total number of pages for pagination
     pagination_footer = driver.find_element(By.CLASS_NAME, "paginationFooter").text
-    page_numbers = pagination_footer.split()[-1]
+    page_numbers = pagination_footer.split()[-1] # Total page numbers in the page
     page_start = 1 # Start page (mark checkpoint if the algorithm haulted for connection reason)
-    jobs_per_page = 10  # Number of jobs to fetch per page
+    page_end = 30
+    # jobs_per_page = 10  # Number of jobs to fetch per page
 
 
     jobs = []
     
     # Click next until reaching start page
     for _ in range(page_start - 1):
-        print("Next page:")
+        print("Next page >>")
         if not click_next_button(driver):
             print("Reached the desired starting page.")
             break
     
     
-    for page_num in range(page_start, int(page_numbers) + 1):
+    for page_num in range(page_start, int(page_end) + 1):
         
         print("="*50)    
         print(f"Accessing page {page_num}")
@@ -216,13 +222,15 @@ def main(job_title, export_interval=3):
         # Iterate over job listings
         for listing in job_listings:
             driver.execute_script("arguments[0].click();", listing)
-            time.sleep(3)
+            time.sleep(10)
             click_show_more(driver)
-            time.sleep(2)
+            time.sleep(10)
             job_details = extract_job_details(listing, driver)
             if job_details not in jobs:
+                job_index = len(jobs) + 1  # Get the current index of the job in the jobs list
                 print(job_details)
-                print("/"*10)
+                print(f"Job {job_index} (Page {page_num}):")
+                print("/" * 10)
                 jobs.append(job_details)
         
         if not click_next_button(driver):
