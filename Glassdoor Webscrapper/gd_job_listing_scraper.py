@@ -95,8 +95,7 @@ def extract_job_details(listing, driver):
     except NoSuchElementException:        
         employer_name = "N/A"
     
-    # Extract job description
-    # Extract job description
+   # Extract job description
     job_description = ""
     try:
         job_description_element = driver.find_element(By.CLASS_NAME, "jobDescriptionContent")
@@ -106,10 +105,10 @@ def extract_job_details(listing, driver):
     except NoSuchElementException:
         job_description = "N/A"
     
-    # Clean and limit job description to a certain length
-    max_job_description_length = 32767  # Set a maximum character limit to display well in excel
-    job_description = job_description[:max_job_description_length]
-         
+    # Split job description into three parts
+    num_parts = 3
+    job_description_parts = [job_description[i:i+len(job_description)//num_parts] for i in range(0, len(job_description), len(job_description)//num_parts)]
+    
     # Extract rating
     try:
          rating = driver.find_element(By.CSS_SELECTOR, '[data-test="detailRating"]').text
@@ -120,9 +119,21 @@ def extract_job_details(listing, driver):
     job_details["Location"] = location
     job_details["Job Title"] = job_title
     job_details["Salary Estimate"] = salary_estimate
-    job_details["Employer Name"] =  employer_name    
-    job_details["Job Description"] = job_description.replace('\n', ' ')
+    job_details["Employer Name"] = employer_name
+    job_details["Job Description Part 1"] = job_description_parts[0] if len(job_description_parts) > 0 else "N/A"
+    job_details["Job Description Part 2"] = job_description_parts[1] if len(job_description_parts) > 1 else "N/A"
+    job_details["Job Description Part 3"] = job_description_parts[2] if len(job_description_parts) > 2 else "N/A"
     job_details["Rating"] = rating
+    job_details["Company Size"] = job_details.get("Company Size", "N/A")
+    job_details["Founded"] = job_details.get("Founded", "N/A")
+    job_details["Type"] = job_details.get("Type", "N/A")
+    job_details["Industry"] = job_details.get("Industry", "N/A")
+    job_details["Sector"] = job_details.get("Sector", "N/A")
+    job_details["Revenue"] = job_details.get("Revenue", "N/A")
+    
+    # Add job description parts to job details dictionary
+    for i, part in enumerate(job_description_parts, start=1):
+        job_details[f"Job Description Part {i}"] = part
     
     # Extract company info  
     try:
@@ -220,7 +231,13 @@ def print_job_details(job_index, page_num, job_details):
     print("Job Title:", job_details.get("Job Title", "N/A"))
     print("Salary Estimate:", job_details.get("Salary Estimate", "N/A"))
     print("Employer Name:", job_details.get("Employer Name", "N/A"))
-    print("Job Description:", job_details.get("Job Description", "N/A")[:200])  # Limit to 200 characters
+    
+    # Print job description parts
+    for part_num in range(1, 4):
+        description_part_key = f"Job Description Part {part_num}"
+        description_part = job_details.get(description_part_key, "N/A")
+        print(f"Job Description Part {part_num}:", description_part)
+    
     print("Rating:", job_details.get("Rating", "N/A"))
     print("Company Size:", job_details.get("Company Size", "N/A"))
     print("Founded:", job_details.get("Founded", "N/A"))
@@ -228,6 +245,8 @@ def print_job_details(job_index, page_num, job_details):
     print("Industry:", job_details.get("Industry", "N/A"))
     print("Sector:", job_details.get("Sector", "N/A"))
     print("Revenue:", job_details.get("Revenue", "N/A"))
+
+
     
 
 # Main function to initiate scraping
@@ -284,6 +303,7 @@ def main(job_title, export_interval=1):
                 jobs.append(job_details)
             else: 
                 # If already inserted in the array wait to give website time to load
+                print("Job listing already present")
                 time.sleep(5)
         if not click_next_button(driver):
             break
